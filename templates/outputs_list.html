@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Drafts – TERN Newsroom{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header__left">
+    <h1 class="page-title">📝 Alle Drafts</h1>
+    <p class="page-subtitle text-muted">{{ outputs|length }} gespeicherte Posts</p>
+  </div>
+  <div class="page-header__right">
+    <a href="{{ url_for('free_generator') }}" class="btn btn-primary">+ Neuen Post erstellen</a>
+  </div>
+</div>
+
+{% if not outputs %}
+  <div class="empty-state">
+    <div class="empty-state__icon">📝</div>
+    <p>Noch keine Posts generiert.</p>
+    <a href="{{ url_for('free_generator') }}" class="btn btn-primary">Ersten Post erstellen</a>
+  </div>
+{% else %}
+  <div class="outputs-grid">
+    {% for output in outputs %}
+      <a href="{{ url_for('output_detail', output_id=output['id']) }}" class="output-card">
+        <div class="output-card__header">
+          <span class="mode-badge mode-badge--{{ output['output_mode'] }}">
+            {% if output['output_mode'] == 'news_based' %}📰 News{% elif output['output_mode'] == 'free' %}✍️ Frei{% else %}🔀 Hybrid{% endif %}
+          </span>
+          <span class="text-muted text-sm">{{ output['created_at'][:10] }}</span>
+        </div>
+
+        {% if output['title'] %}
+          <div class="output-card__title">{{ output['title'] }}</div>
+        {% endif %}
+
+        <div class="output-card__preview">
+          {{ output['content'][:160] }}{% if output['content']|length > 160 %}…{% endif %}
+        </div>
+
+        <div class="output-card__footer">
+          {% if output['output_type'] %}
+            <span class="post-type-tag post-type-tag--sm">{{ output['output_type'] }}</span>
+          {% endif %}
+          {% if output['article_headline'] %}
+            <span class="text-muted text-sm">aus: {{ output['article_headline'][:50] }}…</span>
+          {% endif %}
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}

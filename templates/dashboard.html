@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – TERN Newsroom{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header__left">
+    <h1 class="page-title">Newsroom Dashboard</h1>
+    {% if last_refresh %}
+      <span class="text-muted text-sm">
+        Letzte Aktualisierung: {{ last_refresh['started_at'][:16].replace('T',' ') }} UTC
+        {% if last_refresh['triggered_by'] == 'scheduler' %}(automatisch){% else %}(manuell){% endif %}
+        · {{ last_refresh['articles_added'] }} neu
+      </span>
+    {% else %}
+      <span class="text-muted text-sm">Noch keine Aktualisierung durchgeführt.</span>
+    {% endif %}
+  </div>
+  <div class="page-header__right">
+    <form method="POST" action="{{ url_for('manual_refresh') }}">
+      <button type="submit" class="btn btn-primary">↻ Jetzt aktualisieren</button>
+    </form>
+  </div>
+</div>
+
+<!-- Stats bar -->
+<div class="stats-bar">
+  <div class="stat-card">
+    <div class="stat-number">{{ stats.total }}</div>
+    <div class="stat-label">Artikel ({{ filters.days }}d)</div>
+  </div>
+  <div class="stat-card stat-card--green">
+    <div class="stat-number">{{ stats.high_relevance }}</div>
+    <div class="stat-label">Hoch relevant</div>
+  </div>
+  <div class="stat-card stat-card--amber">
+    <div class="stat-number">{{ stats.unused }}</div>
+    <div class="stat-label">Unbearbeitet</div>
+  </div>
+  <div class="stat-card stat-card--blue">
+    <div class="stat-number">{{ stats.outputs_today }}</div>
+    <div class="stat-label">Posts heute</div>
+  </div>
+</div>
+
+<!-- Two-column layout -->
+<div class="dashboard-grid">
+
+  <!-- Left: main article feed -->
+  <div class="dashboard-main">
+
+    <!-- Filters -->
+    <form method="GET" action="{{ url_for('dashboard') }}" class="filter-bar">
+      <div class="filter-group">
+        <label class="filter-label">Zeitraum</label>
+        <select name="days" class="filter-select" onchange="this.form.submit()">
+          <option value="1" {% if filters.days == 1 %}selected{% endif %}>Letzte 24h</option>
+          <option value="3" {% if filters.days == 3 %}selected{% endif %}>Letzte 3 Tage</option>
+          <option value="7" {% if filters.days == 7 %}selected{% endif %}>Letzte 7 Tage</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Min. Score</label>
+        <select name="min_score" class="filter-select" onchange="this.form.submit()">
+          <option value="0"  {% if filters.min_score == 0  %}selected{% endif %}>Alle</option>
+          <option value="40" {% if filters.min_score == 40 %}selected{% endif %}>≥ 40</option>
+          <option value="60" {% if filters.min_score == 60 %}selected{% endif %}>≥ 60 (relevant)</option>
+          <option value="75" {% if filters.min_score == 75 %}selected{% endif %}>≥ 75 (hoch)</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Cluster</label>
+        <select name="cluster" class="filter-select" onchange="this.form.submit()">
+          <option value="">Alle Cluster</option>
+          {% for c in all_clusters %}
+            <option value="{{ c }}" {% if filters.cluster == c %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Quelle</label>
+        <select name="source" class="filter-select" onchange="this.form.submit()">
+          <option value="">Alle Quellen</option>
+          {% for s in all_sources %}
+            <option value="{{ s }}" {% if filters.source == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Status</label>
+        <select name="status" class="filter-select" onchange="this.form.submit()">
+          <option value="">Alle</option>
+          <option value="new"      {% if filters.status == 'new'      %}selected{% endif %}>Neu</option>
+          <option value="reviewed" {% if filters.status == 'reviewed' %}selected{% endif %}>Geprüft</option>
+          <option value="ignored"  {% if filters.status == 'ignored'  %}selected{% endif %}>Ignoriert</option>
+          <option value="used"     {% if filters.status == 'used'     %}selected{% endif %}>Verwendet</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label class="filter-label">Sortierung</label>
+        <select name="sort" class="filter-select" onchange="this.form.submit()">
+          <option value="score" {% if filters.sort == 'score' %}selected{% endif %}>Relevanz</option>
+          <option value="date"  {% if filters.sort == 'date'  %}selected{% endif %}>Datum</option>
+        </select>
+      </div>
+    </form>
+
+    <!-- Article list -->
+    <div class="article-list">
+      {% if not articles %}
+        <div class="empty-state">
+          <div class="empty-state__icon">📰</div>
+          <p>Keine Artikel gefunden. Starte eine Aktualisierung oder passe die Filter an.</p>
+          <form method="POST" action="{{ url_for('manual_refresh') }}">
+            <button type="submit" class="btn btn-primary">↻ Quellen abrufen</button>
+          </form>
+        </div>
+      {% endif %}
+
+      {% for article in articles %}
+        <a href="{{ url_for('article_detail', article_id=article['id']) }}" class="article-card {% if article['content_status'] == 'ignored' %}article-card--ignored{% elif article['content_status'] == 'used' %}article-card--used{% endif %}">
+          <div class="article-card__header">
+            <div class="article-card__meta">
+              <span class="source-badge source-badge--tier{{ article['source_tier'] }}">
+                T{{ article['source_tier'] }} · {{ article['source_name'] }}
+              </span>
+              {% if article['published_at'] %}
+                <span class="text-muted text-sm">{{ article['published_at'][:10] }}</span>
+              {% endif %}
+            </div>
+            <div class="article-card__actions">
+              {% if article['is_favorite'] %}
+                <span class="star-badge" title="Favorit">★</span>
+              {% endif %}
+              <span class="score-badge {% if article['tern_relevance_score'] >= 70 %}score-badge--high{% elif article['tern_relevance_score'] >= 40 %}score-badge--medium{% else %}score-badge--low{% endif %}">
+                {{ article['tern_relevance_score'] }}
+              </span>
+            </div>
+          </div>
+
+          <h3 class="article-card__headline">{{ article['headline'] }}</h3>
+
+          {% if article['summary_short'] %}
+            <p class="article-card__summary">{{ article['summary_short'][:180] }}{% if article['summary_short']|length > 180 %}…{% endif %}</p>
+          {% endif %}
+
+          <div class="article-card__footer">
+            {% if article['topic_cluster'] %}
+              <span class="cluster-tag">{{ article['topic_cluster'] }}</span>
+            {% endif %}
+            {% if article['post_chance'] %}
+              <span class="chance-badge chance-badge--{{ article['post_chance'] }}">
+                {% if article['post_chance'] == 'high' %}🔥 Hohe Post-Chance{% elif article['post_chance'] == 'medium' %}💡 Mittlere Post-Chance{% else %}· Beobachten{% endif %}
+              </span>
+            {% endif %}
+            <span class="status-dot status-dot--{{ article['content_status'] }}" data-status-badge="{{ article['id'] }}">
+              {{ article['content_status'] }}
+            </span>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Right sidebar: editorial opportunities + recent outputs -->
+  <div class="dashboard-sidebar">
+
+    {% if top_debate %}
+    <div class="sidebar-section">
+      <h2 class="sidebar-title">🔥 Stärkste TERN-Treffer</h2>
+      {% for article in top_debate %}
+        <a href="{{ url_for('article_detail', article_id=article['id']) }}" class="sidebar-article">
+          <div class="sidebar-article__score">{{ article['tern_relevance_score'] }}</div>
+          <div class="sidebar-article__text">
+            <div class="sidebar-article__headline">{{ article['headline'][:80] }}{% if article['headline']|length > 80 %}…{% endif %}</div>
+            <div class="sidebar-article__source text-muted text-sm">{{ article['source_name'] }}</div>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if top_repost %}
+    <div class="sidebar-section">
+      <h2 class="sidebar-title">💡 Post-Chance hoch</h2>
+      {% for article in top_repost %}
+        <a href="{{ url_for('article_detail', article_id=article['id']) }}" class="sidebar-article">
+          <div class="sidebar-article__score sidebar-article__score--green">✓</div>
+          <div class="sidebar-article__text">
+            <div class="sidebar-article__headline">{{ article['headline'][:80] }}{% if article['headline']|length > 80 %}…{% endif %}</div>
+            <div class="sidebar-article__source text-muted text-sm">{{ article['source_name'] }}</div>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="sidebar-section">
+      <h2 class="sidebar-title">📝 Zuletzt erstellt</h2>
+      {% if recent_outputs %}
+        {% for output in recent_outputs %}
+          <a href="{{ url_for('output_detail', output_id=output['id']) }}" class="sidebar-output">
+            <div class="sidebar-output__mode mode-badge mode-badge--{{ output['output_mode'] }}">
+              {{ 'News' if output['output_mode'] == 'news_based' else 'Frei' }}
+            </div>
+            <div class="sidebar-output__text">
+              <div class="sidebar-output__title">{{ (output['title'] or output['content'][:60]) }}{% if not output['title'] and output['content']|length > 60 %}…{% endif %}</div>
+              <div class="text-muted text-sm">{{ output['created_at'][:16].replace('T',' ') }}</div>
+            </div>
+          </a>
+        {% endfor %}
+        <a href="{{ url_for('outputs_list') }}" class="btn btn-sm btn-outline" style="margin-top:12px;display:block;text-align:center;">
+          Alle Drafts anzeigen →
+        </a>
+      {% else %}
+        <p class="text-muted text-sm">Noch keine Posts erstellt.</p>
+        <a href="{{ url_for('free_generator') }}" class="btn btn-sm btn-primary" style="margin-top:8px">
+          + Ersten Post erstellen
+        </a>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}

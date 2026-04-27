@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}TERN LinkedIn Newsroom{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+  {% if session.get('logged_in') %}
+  <nav class="navbar">
+    <div class="nav-brand">
+      <span class="nav-logo">⬡</span>
+      <span class="nav-title">TERN Newsroom</span>
+    </div>
+    <div class="nav-links">
+      <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+        Dashboard
+      </a>
+      <a href="{{ url_for('free_generator') }}" class="nav-link {% if request.endpoint in ('free_generator','free_generator_submit') %}active{% endif %}">
+        Post erstellen
+      </a>
+      <a href="{{ url_for('outputs_list') }}" class="nav-link {% if request.endpoint in ('outputs_list','output_detail') %}active{% endif %}">
+        Drafts
+      </a>
+    </div>
+    <div class="nav-actions">
+      <form method="POST" action="{{ url_for('manual_refresh') }}" style="display:inline">
+        <button type="submit" class="btn btn-sm btn-outline" title="Quellen jetzt aktualisieren">
+          ↻ Aktualisieren
+        </button>
+      </form>
+      <a href="{{ url_for('logout') }}" class="nav-link nav-link--muted">Abmelden</a>
+    </div>
+  </nav>
+  {% endif %}
+
+  <main class="main-content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for category, message in messages %}
+            <div class="flash flash--{{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <script>
+    // Auto-dismiss flash messages
+    setTimeout(() => {
+      document.querySelectorAll('.flash').forEach(el => {
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 400);
+      });
+    }, 5000);
+
+    // AJAX status toggle
+    document.addEventListener('click', function(e) {
+      const btn = e.target.closest('[data-status-toggle]');
+      if (!btn) return;
+      e.preventDefault();
+      const articleId = btn.dataset.articleId;
+      const status = btn.dataset.status;
+      fetch(`/article/${articleId}/status`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded',
+                  'X-Requested-With': 'XMLHttpRequest'},
+        body: `status=${status}`
+      }).then(r => r.json()).then(() => {
+        const badge = document.querySelector(`[data-status-badge="${articleId}"]`);
+        if (badge) badge.textContent = status;
+        btn.classList.add('active');
+      });
+    });
+
+    // Copy to clipboard
+    document.addEventListener('click', function(e) {
+      const btn = e.target.closest('[data-copy]');
+      if (!btn) return;
+      const targetId = btn.dataset.copy;
+      const el = document.getElementById(targetId);
+      if (!el) return;
+      navigator.clipboard.writeText(el.innerText || el.value).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = '✓ Kopiert';
+        setTimeout(() => { btn.textContent = orig; }, 2000);
+      });
+    });
+  </script>
+
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

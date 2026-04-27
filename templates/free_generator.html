@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block title %}Post erstellen – TERN Newsroom{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="page-header__left">
+    <h1 class="page-title">✍️ Post erstellen</h1>
+    <p class="page-subtitle text-muted">LinkedIn-Post ohne Quellartikel – freie Inhaltserstellung</p>
+  </div>
+</div>
+
+<div class="free-generator-layout">
+  <form method="POST" action="{{ url_for('free_generator_submit') }}" class="free-generator-form">
+
+    <!-- Row 1: content type + post type -->
+    <div class="form-section">
+      <h2 class="form-section-title">1. Was wird erstellt?</h2>
+      <div class="form-row form-row--3">
+        <div class="form-group">
+          <label class="form-label">Inhaltsbereich</label>
+          <select name="content_type" class="form-select">
+            <option value="">Bitte wählen…</option>
+            {% for value, label in content_types %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Post-Typ</label>
+          <select name="output_type" class="form-select">
+            {% for value, label in post_types %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Zielgruppe</label>
+          <select name="target_audience" class="form-select">
+            <option value="">Allgemein</option>
+            {% for value, label in target_audiences %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: strategy -->
+    <div class="form-section">
+      <h2 class="form-section-title">2. Strategie & Ziel</h2>
+      <div class="form-row form-row--2">
+        <div class="form-group">
+          <label class="form-label">Ziel des Posts</label>
+          <select name="objective" class="form-select">
+            {% for value, label in objectives %}
+              <option value="{{ value }}" {% if value == 'Positionierung' %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Perspektive / Absender</label>
+          <select name="perspective" class="form-select">
+            {% for value, label in perspectives %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: style -->
+    <div class="form-section">
+      <h2 class="form-section-title">3. Stil & Ton</h2>
+      <div class="form-row form-row--3">
+        <div class="form-group">
+          <label class="form-label">Ton</label>
+          <select name="tone" class="form-select">
+            {% for value, label in tones %}
+              <option value="{{ value }}" {% if value == 'sachlich-einordnend' %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Schreibstil</label>
+          <select name="wording_style" class="form-select">
+            {% for value, label in wording_styles %}
+              <option value="{{ value }}" {% if value == 'deutsch business-clean' %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Länge</label>
+          <select name="length" class="form-select">
+            {% for value, label in lengths %}
+              <option value="{{ value }}" {% if value == 'mittel' %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-row form-row--2">
+        <div class="form-group">
+          <label class="form-label">Struktur</label>
+          <select name="structure" class="form-select">
+            {% for value, label in structures %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">CTA</label>
+          <select name="cta" class="form-select">
+            {% for value, label in cta_options %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 4: content input -->
+    <div class="form-section">
+      <h2 class="form-section-title">4. Inhalt & Kontext</h2>
+
+      <div class="form-group">
+        <label class="form-label">Kernpunkte / Stichworte <span class="label-hint">(optional – was soll im Post erscheinen?)</span></label>
+        <textarea name="key_points" class="form-textarea" rows="4"
+          placeholder="z.B. &#10;- TERN hat 200 Pflegekräfte aus Philippinen vermittelt&#10;- Anerkennungsverfahren dauerte 8 Monate&#10;- Partner: Uniklinik Frankfurt"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Hinweise / Hintergrundinformationen <span class="label-hint">(optional)</span></label>
+        <textarea name="user_notes" class="form-textarea" rows="3"
+          placeholder="Kontext, besondere Anforderungen oder was vermieden werden soll…"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Referenz-Links <span class="label-hint">(optional)</span></label>
+        <input type="text" name="reference_links" class="form-input"
+          placeholder="https://… (mehrere mit Komma trennen)">
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary btn-large">
+        ⚡ LinkedIn-Post generieren
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+{% block title %}{{ article['headline'][:60] }} – TERN Newsroom{% endblock %}
+
+{% block content %}
+<div class="detail-layout">
+
+  <!-- ─── Article Intelligence Panel ───────────────────── -->
+  <div class="detail-main">
+
+    <div class="breadcrumb">
+      <a href="{{ url_for('dashboard') }}">← Dashboard</a>
+    </div>
+
+    <!-- Article header -->
+    <div class="article-header">
+      <div class="article-header__meta">
+        <span class="source-badge source-badge--tier{{ article['source_tier'] }}">
+          Tier {{ article['source_tier'] }} · {{ article['source_name'] }}
+        </span>
+        {% if article['published_at'] %}
+          <span class="text-muted">Veröffentlicht: {{ article['published_at'][:10] }}</span>
+        {% endif %}
+        {% if article['author'] %}
+          <span class="text-muted">Von: {{ article['author'] }}</span>
+        {% endif %}
+      </div>
+      <h1 class="article-detail-headline">{{ article['headline'] }}</h1>
+      {% if article['subheadline'] %}
+        <p class="article-subheadline">{{ article['subheadline'] }}</p>
+      {% endif %}
+      {% if article['article_url'] %}
+        <a href="{{ article['article_url'] }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline">
+          ↗ Originalartikel öffnen
+        </a>
+      {% endif %}
+    </div>
+
+    <!-- Status + actions -->
+    <div class="action-bar">
+      <div class="action-bar__left">
+        <span class="label">Status:</span>
+        <span class="status-dot status-dot--{{ article['content_status'] }}" style="margin-right:8px">
+          {{ article['content_status'] }}
+        </span>
+        <form method="POST" action="{{ url_for('update_article_status', article_id=article['id']) }}" style="display:inline-flex;gap:6px">
+          {% for s in [('reviewed','Geprüft'),('ignored','Ignorieren'),('used','Verwendet')] %}
+            {% if article['content_status'] != s[0] %}
+              <button type="submit" name="status" value="{{ s[0] }}" class="btn btn-xs btn-outline">{{ s[1] }}</button>
+            {% endif %}
+          {% endfor %}
+        </form>
+      </div>
+      <div class="action-bar__right">
+        <form method="POST" action="{{ url_for('update_article_status', article_id=article['id']) }}" style="display:inline">
+          <button type="submit" name="is_favorite" value="{{ '0' if article['is_favorite'] else '1' }}"
+                  class="btn btn-xs {% if article['is_favorite'] %}btn-yellow{% else %}btn-outline{% endif %}">
+            {{ '★ Favorit' if article['is_favorite'] else '☆ Favorit' }}
+          </button>
+        </form>
+        <form method="POST" action="{{ url_for('analyse_article', article_id=article['id']) }}" style="display:inline">
+          <button type="submit" class="btn btn-xs btn-outline">🔍 KI-Analyse</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Intelligence cards -->
+    <div class="intelligence-grid">
+
+      <!-- Score card -->
+      <div class="intel-card intel-card--score">
+        <div class="intel-card__label">TERN Relevanz-Score</div>
+        <div class="intel-card__score {% if article['tern_relevance_score'] >= 70 %}intel-card__score--high{% elif article['tern_relevance_score'] >= 40 %}intel-card__score--medium{% else %}intel-card__score--low{% endif %}">
+          {{ article['tern_relevance_score'] }}<span class="intel-card__score-max">/100</span>
+        </div>
+        {% if article['post_chance'] %}
+          <div class="intel-card__chance">
+            Post-Chance:
+            <strong class="chance-{{ article['post_chance'] }}">
+              {% if article['post_chance'] == 'high' %}🔥 Hoch{% elif article['post_chance'] == 'medium' %}💡 Mittel{% else %}· Gering{% endif %}
+            </strong>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Topic cluster -->
+      <div class="intel-card">
+        <div class="intel-card__label">Themencluster</div>
+        <div class="intel-card__value">
+          {% if article['topic_cluster'] %}
+            <span class="cluster-tag cluster-tag--large">{{ article['topic_cluster'] }}</span>
+          {% else %}
+            <span class="text-muted">Noch nicht klassifiziert</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Relevance reasoning -->
+      {% if article['tern_relevance_reasoning'] %}
+      <div class="intel-card intel-card--wide">
+        <div class="intel-card__label">Relevanz-Begründung</div>
+        <div class="intel-card__text">{{ article['tern_relevance_reasoning'] }}</div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    <!-- Summaries -->
+    {% if article['summary_short'] %}
+    <div class="content-section">
+      <h2 class="section-title">Kurzzusammenfassung</h2>
+      <p class="summary-text">{{ article['summary_short'] }}</p>
+    </div>
+    {% endif %}
+
+    {% if article['summary_long'] %}
+    <div class="content-section">
+      <h2 class="section-title">Ausführliche Zusammenfassung</h2>
+      <p class="summary-text">{{ article['summary_long'] }}</p>
+    </div>
+    {% endif %}
+
+    <!-- TERN angle -->
+    {% if article['tern_angle'] %}
+    <div class="content-section tern-angle-section">
+      <h2 class="section-title">🎯 TERN-Winkel & Kommentarrichtung</h2>
+      <div class="tern-angle-text">{{ article['tern_angle'] }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Recommended post types -->
+    {% if recommended_types %}
+    <div class="content-section">
+      <h2 class="section-title">Empfohlene Post-Typen</h2>
+      <div class="post-type-tags">
+        {% for pt in recommended_types %}
+          <span class="post-type-tag">{{ pt }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Previous outputs from this article -->
+    {% if outputs %}
+    <div class="content-section">
+      <h2 class="section-title">📝 Bisherige Drafts aus diesem Artikel</h2>
+      <div class="output-mini-list">
+        {% for o in outputs %}
+          <a href="{{ url_for('output_detail', output_id=o['id']) }}" class="output-mini-card">
+            <div class="output-mini-card__type">{{ o['output_type'] }}</div>
+            <div class="output-mini-card__preview">{{ (o['title'] or o['content'][:80]) }}{% if not o['title'] and o['content']|length > 80 %}…{% endif %}</div>
+            <div class="output-mini-card__meta text-muted text-sm">{{ o['created_at'][:16].replace('T',' ') }}</div>
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- ─── Generator sidebar ───────────────────────────── -->
+  <div class="detail-sidebar">
+    <div class="generator-panel">
+      <h2 class="generator-panel__title">✍️ Post generieren</h2>
+
+      <form method="POST" action="{{ url_for('generate_from_article', article_id=article['id']) }}" class="generator-form">
+
+        <div class="form-group">
+          <label class="form-label">Post-Typ</label>
+          <select name="output_type" class="form-select">
+            {% for value, label in post_types %}
+              <option value="{{ value }}"
+                {% if recommended_types and value in recommended_types[0]|lower %}selected{% endif %}>
+                {{ label }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Ziel</label>
+          <select name="objective" class="form-select">
+            {% for value, label in objectives %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Perspektive</label>
+          <select name="perspective" class="form-select">
+            {% for value, label in perspectives %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Ton</label>
+          <select name="tone" class="form-select">
+            {% for value, label in tones %}
+              <option value="{{ value }}" {% if value == 'sachlich-einordnend' %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Schreibstil</label>
+          <select name="wording_style" class="form-select">
+            {% for value, label in wording_styles %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group form-group--half">
+            <label class="form-label">Länge</label>
+            <select name="length" class="form-select">
+              {% for value, label in lengths %}
+                <option value="{{ value }}" {% if value == 'mittel' %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group form-group--half">
+            <label class="form-label">Struktur</label>
+            <select name="structure" class="form-select">
+              {% for value, label in structures %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">CTA</label>
+          <select name="cta" class="form-select">
+            {% for value, label in cta_options %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full">
+          ⚡ LinkedIn-Post generieren
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

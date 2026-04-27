@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Draft – TERN Newsroom{% endblock %}
+
+{% block content %}
+<div class="detail-layout detail-layout--output">
+
+  <div class="detail-main">
+
+    <div class="breadcrumb">
+      <a href="{{ url_for('outputs_list') }}">← Alle Drafts</a>
+      {% if article %}
+        · <a href="{{ url_for('article_detail', article_id=article['id']) }}">Artikel</a>
+      {% endif %}
+    </div>
+
+    <!-- Output header -->
+    <div class="output-header">
+      <div class="output-header__meta">
+        <span class="mode-badge mode-badge--{{ output['output_mode'] }}">
+          {% if output['output_mode'] == 'news_based' %}📰 Artikelbasiert{% elif output['output_mode'] == 'free' %}✍️ Freier Post{% else %}🔀 Hybrid{% endif %}
+        </span>
+        <span class="text-muted text-sm">Erstellt: {{ output['created_at'][:16].replace('T',' ') }}</span>
+        {% if output['output_type'] %}
+          <span class="post-type-tag">{{ output['output_type'] }}</span>
+        {% endif %}
+      </div>
+      {% if output['title'] %}
+        <h1 class="output-title">{{ output['title'] }}</h1>
+      {% endif %}
+    </div>
+
+    <!-- Settings summary -->
+    <div class="output-settings-bar">
+      {% if output['objective'] %}<span class="setting-chip">🎯 {{ output['objective'] }}</span>{% endif %}
+      {% if output['perspective'] %}<span class="setting-chip">👤 {{ output['perspective'] }}</span>{% endif %}
+      {% if output['tone'] %}<span class="setting-chip">🎙 {{ output['tone'] }}</span>{% endif %}
+      {% if output['wording_style'] %}<span class="setting-chip">✏️ {{ output['wording_style'] }}</span>{% endif %}
+      {% if output['length_setting'] %}<span class="setting-chip">📏 {{ output['length_setting'] }}</span>{% endif %}
+      {% if output['cta_setting'] and output['cta_setting'] != 'none' %}<span class="setting-chip">📣 CTA: {{ output['cta_setting'] }}</span>{% endif %}
+    </div>
+
+    <!-- Main post content -->
+    <div class="post-content-section">
+      <div class="post-content-header">
+        <h2 class="section-title">📋 LinkedIn-Post</h2>
+        <button class="btn btn-sm btn-outline" data-copy="post-content">📋 Kopieren</button>
+      </div>
+      <div class="post-content-box" id="post-content">{{ output['content'] }}</div>
+    </div>
+
+    <!-- First comment -->
+    {% if output['first_comment'] %}
+    <div class="post-content-section">
+      <div class="post-content-header">
+        <h2 class="section-title">💬 Erster Kommentar</h2>
+        <button class="btn btn-sm btn-outline" data-copy="first-comment">📋 Kopieren</button>
+      </div>
+      <div class="post-content-box post-content-box--comment" id="first-comment">{{ output['first_comment'] }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Hashtags -->
+    {% if output['hashtag_suggestion'] %}
+    <div class="post-content-section">
+      <div class="post-content-header">
+        <h2 class="section-title"># Hashtags</h2>
+        <button class="btn btn-sm btn-outline" data-copy="hashtags">📋 Kopieren</button>
+      </div>
+      <div class="hashtag-box" id="hashtags">{{ output['hashtag_suggestion'] }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Rationale + media -->
+    <div class="output-meta-grid">
+      {% if output['rationale'] %}
+      <div class="meta-card">
+        <div class="meta-card__title">💡 Warum dieser Ansatz?</div>
+        <div class="meta-card__text">{{ output['rationale'] }}</div>
+      </div>
+      {% endif %}
+
+      {% if output['media_recommendation'] %}
+      <div class="meta-card meta-card--media">
+        <div class="meta-card__title">📸 Bildmaterial-Empfehlung</div>
+        <div class="meta-card__text">{{ output['media_recommendation'] }}</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Source article reference -->
+    {% if article %}
+    <div class="content-section">
+      <h2 class="section-title">📰 Basierend auf Artikel</h2>
+      <a href="{{ url_for('article_detail', article_id=article['id']) }}" class="article-ref-card">
+        <div class="article-ref-card__source">{{ article['source_name'] }}</div>
+        <div class="article-ref-card__headline">{{ article['headline'] }}</div>
+        {% if article['published_at'] %}
+          <div class="article-ref-card__date text-muted text-sm">{{ article['published_at'][:10] }}</div>
+        {% endif %}
+      </a>
+    </div>
+    {% endif %}
+
+    <!-- Free content notes -->
+    {% if output['output_mode'] == 'free' and output['user_notes'] %}
+    <div class="content-section">
+      <h2 class="section-title">Eingabe-Notizen</h2>
+      <p class="text-muted">{{ output['user_notes'] }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Delete -->
+    <div class="danger-zone">
+      <form method="POST" action="{{ url_for('delete_output', output_id=output['id']) }}"
+            onsubmit="return confirm('Draft wirklich löschen?')">
+        <button type="submit" class="btn btn-sm btn-danger">🗑 Draft löschen</button>
+      </form>
+    </div>
+
+  </div>
+
+  <!-- Sidebar: quick actions -->
+  <div class="detail-sidebar detail-sidebar--narrow">
+    <div class="sidebar-section">
+      <h2 class="sidebar-title">Aktionen</h2>
+      <button class="btn btn-primary btn-full" data-copy="post-content">📋 Post kopieren</button>
+      {% if output['first_comment'] %}
+        <button class="btn btn-outline btn-full" data-copy="first-comment" style="margin-top:8px">💬 Kommentar kopieren</button>
+      {% endif %}
+      {% if output['hashtag_suggestion'] %}
+        <button class="btn btn-outline btn-full" data-copy="hashtags" style="margin-top:8px"># Hashtags kopieren</button>
+      {% endif %}
+    </div>
+
+    {% if article %}
+    <div class="sidebar-section">
+      <h2 class="sidebar-title">Weiteren Post erstellen</h2>
+      <a href="{{ url_for('article_detail', article_id=article['id']) }}"
+         class="btn btn-outline btn-full">
+        ← Zum Artikel
+      </a>
+    </div>
+    {% endif %}
+
+    <div class="sidebar-section">
+      <h2 class="sidebar-title">Neuen Post</h2>
+      <a href="{{ url_for('free_generator') }}" class="btn btn-outline btn-full">
+        ✍️ Freier Post erstellen
+      </a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
